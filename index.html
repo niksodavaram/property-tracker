@@ -121,14 +121,14 @@
           <td><span class="responsibility-pill resp-shah">Shah – Managing Agent</span></td>
           <td>Email confirmation that you accept full management responsibility for all occupants.</td>
           <td>
-            <select class="status-not-started">
+            <select id="row-1-status" class="status-not-started">
               <option>Not Started</option>
               <option>In Progress</option>
               <option>Completed</option>
             </select>
           </td>
-          <td><input type="date"></td>
-          <td><textarea></textarea></td>
+          <td><input id="row-1-date" type="date"></td>
+          <td><textarea id="row-1-notes"></textarea></td>
         </tr>
 
         <!-- 2 -->
@@ -142,14 +142,14 @@
           <td><span class="responsibility-pill resp-shah">Shah – Managing Agent</span></td>
           <td>Copy of breach notice and deadline for rectification.</td>
           <td>
-            <select class="status-not-started">
+            <select id="row-2-status" class="status-not-started">
               <option>Not Started</option>
               <option>In Progress</option>
               <option>Completed</option>
             </select>
           </td>
-          <td><input type="date"></td>
-          <td><textarea></textarea></td>
+          <td><input id="row-2-date" type="date"></td>
+          <td><textarea id="row-2-notes"></textarea></td>
         </tr>
 
         <!-- 3a -->
@@ -169,14 +169,14 @@
           <td><span class="responsibility-pill resp-both">CCTV: Nik • Notices/VCAT: Shah</span></td>
           <td>• Date CCTV is fully operational • Copy of Notice to Vacate • VCAT application ref.</td>
           <td>
-            <select class="status-not-started">
+            <select id="row-3a-status" class="status-not-started">
               <option>Not Started</option>
               <option>In Progress</option>
               <option>Completed</option>
             </select>
           </td>
-          <td><input type="date"></td>
-          <td><textarea></textarea></td>
+          <td><input id="row-3a-date" type="date"></td>
+          <td><textarea id="row-3a-notes"></textarea></td>
         </tr>
 
         <!-- 3b -->
@@ -190,14 +190,14 @@
           <td><span class="responsibility-pill resp-shah">Shah – Managing Agent</span></td>
           <td>• Arrears schedule • Payment deadlines • Confirmation about VCAT if unpaid.</td>
           <td>
-            <select class="status-not-started">
+            <select id="row-3b-status" class="status-not-started">
               <option>Not Started</option>
               <option>In Progress</option>
               <option>Completed</option>
             </select>
           </td>
-          <td><input type="date"></td>
-          <td><textarea></textarea></td>
+          <td><input id="row-3b-date" type="date"></td>
+          <td><textarea id="row-3b-notes"></textarea></td>
         </tr>
 
         <!-- 4 -->
@@ -215,17 +215,94 @@
           <td><span class="responsibility-pill resp-shah">Shah – Managing Agent</span></td>
           <td>• Inspection date • Written inspection report with photos • Confirmation of tyre/garage clearance and Tai’s exit condition.</td>
           <td>
-            <select class="status-not-started">
+            <select id="row-4-status" class="status-not-started">
               <option>Not Started</option>
               <option>In Progress</option>
               <option>Completed</option>
             </select>
           </td>
-          <td><input type="date"></td>
-          <td><textarea></textarea></td>
+          <td><input id="row-4-date" type="date"></td>
+          <td><textarea id="row-4-notes"></textarea></td>
         </tr>
       </tbody>
     </table>
   </div>
+
+  <!-- Firebase + Firestore logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      getDoc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    // Your Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAnHu76YrAadTXufo6tKpTbFjlExsYWzyw",
+      authDomain: "sacred-drive-mngt-tracker.firebaseapp.com",
+      projectId: "sacred-drive-mngt-tracker",
+      storageBucket: "sacred-drive-mngt-tracker.firebasestorage.app",
+      messagingSenderId: "630563865861",
+      appId: "1:630563865861:web:189e6a637ff7b24da9236c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const rowIds = ["1", "2", "3a", "3b", "4"];
+
+    function initRow(rowId) {
+      const statusEl = document.getElementById(`row-${rowId}-status`);
+      const dateEl   = document.getElementById(`row-${rowId}-date`);
+      const notesEl  = document.getElementById(`row-${rowId}-notes`);
+
+      if (!statusEl || !dateEl || !notesEl) return;
+
+      const ref = doc(db, "actions", rowId);
+
+      // Load once on page load
+      getDoc(ref).then((snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        if (data.status) statusEl.value = data.status;
+        if (data.dateCompleted) dateEl.value = data.dateCompleted;
+        if (data.notes) notesEl.value = data.notes;
+      });
+
+      // Listen for live updates
+      onSnapshot(ref, (snap) => {
+        if (!snap.exists()) return;
+        const data = snap.data();
+        if (document.activeElement !== statusEl && data.status) {
+          statusEl.value = data.status;
+        }
+        if (document.activeElement !== dateEl && data.dateCompleted) {
+          dateEl.value = data.dateCompleted;
+        }
+        if (document.activeElement !== notesEl && data.notes) {
+          notesEl.value = data.notes;
+        }
+      });
+
+      const save = async () => {
+        await setDoc(ref, {
+          status: statusEl.value,
+          dateCompleted: dateEl.value,
+          notes: notesEl.value
+        }, { merge: true });
+      };
+
+      statusEl.addEventListener("change", save);
+      dateEl.addEventListener("change", save);
+      notesEl.addEventListener("blur", save);
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      rowIds.forEach(initRow);
+    });
+  </script>
 </body>
 </html>
